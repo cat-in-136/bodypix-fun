@@ -1,8 +1,7 @@
 const tf = require('@tensorflow/tfjs-node-gpu');
 //const tf = require('@tensorflow/tfjs-node');
 const bodyPix = require('@tensorflow-models/body-pix');
-const nodeWebcam = require('node-webcam');
-const Jimp = require('jimp');
+const cv = require('opencv4nodejs');
 
 (async () => {
   const net = await bodyPix.load({
@@ -13,51 +12,27 @@ const Jimp = require('jimp');
   });
   console.debug('BodyPix Loaded.');
 
-  const webcam = nodeWebcam.create({
-    saveShots: false,
-    output: 'jpeg',
-    device: false,
-    callbackReturn: 'buffer',
-    verbose: true,
-  });
-  const webcamCapture = () => new Promise((resolve, reject) => {
-    webcam.capture('captured.jpg', (err, data) => {
-      if (!!err) {
-        reject(err);
-      } else {
-        resolve(data);
-      }
-    });
-  });
-  console.debug('Webcam opened.');
+  const capture = new cv.VideoCapture(0);
 
-  const background = await Jimp.read('background.jpg');
+  const background = await cv.imreadAsync('background.jpg');
   console.time('iteration');
   {
-    let buf = await webcamCapture();
+    const cap = await capture.readAsync();
+    const [ width, height ] = cap.sizes;
+    await cv.imwriteAsync('capture.jpg', cap);
 
     console.time('bodyPix');
-    const image = tf.node.decodeImage(buf);
-    const { data, width, height } = await net.segmentPerson(image, {
+    const image = tf.tensor3d(await cap.getData(), [width, height, 3]);
+    const { data } = await net.segmentPerson(image, {
       flipHorizontal: false,
       internalResolution: 'medium',
       segmentationThreshold: 0.7,
     });
     console.timeEnd('bodyPix');
-    const mask = new Uint8Array(width * height * 4);
-    for (let i = 0; i < width * height; i++) {
-      mask[4 * i + 0] = data[i] * 0xFF;
-      mask[4 * i + 1] = data[i] * 0xFF;
-      mask[4 * i + 2] = data[i] * 0xFF;
-      mask[4 * i + 3] = 0xFF;
-    }
-    const m = await Jimp.read({data: mask, width, height});
-    m.write('mask.jpg');
+    const mask = new cv.Mat(new Uint8Array(data), width, height, cv.CV_8U);
 
-    const output = await Jimp.read(buf)
-    await output.mask(m);
-    await output.composite(background, 0, 0, { mode: Jimp.BLEND_DESTINATION_OVER });
-    output.write('masked.jpg');
+    const output = cap.copyTo(background, mask);
+    await cv.imwriteAsync('masked.jpg', output);
   }
   console.timeEnd('iteration');
 
