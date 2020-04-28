@@ -12,6 +12,7 @@
     "@tensorflow-models/body-pix": "^2.0.5",
     "@tensorflow/tfjs-node": "^1.7.3",
     "@tensorflow/tfjs-node-gpu": "^1.7.3",
-    "opencv4nodejs": "^5.5.0"
+    "opencv4nodejs": "^5.5.0",
+    "yargs": "^15.3.1"
   }
 }
