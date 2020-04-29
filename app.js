@@ -18,6 +18,10 @@ const argv = require('yargs')
     desc: 'output file path',
     type: 'string',
   })
+  .option('preview', {
+    desc: 'preview on window',
+    type: 'bool',
+  })
   .check((args) => {
     // https://github.com/yargs/yargs/issues/1318#issuecomment-568301488
     const arrayArgs = Object.entries(args)
@@ -80,9 +84,20 @@ const cv = require('opencv4nodejs');
       background.copyTo(outFrame);
       frame.copyTo(outFrame, mask);
       out.write(outFrame);
+
+      if (argv['preview']) {
+        cv.imshow('out', outFrame);
+        if (cv.waitKey(1) == 'q'.charCodeAt(0)) {
+          break;
+        }
+      }
     }
   } finally {
     vCap.release();
     out.release();
+
+    if (argv['preview']) {
+      cv.destroyAllWindows();
+    }
   }
 })();
