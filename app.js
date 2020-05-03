@@ -12,6 +12,11 @@ const argv = require('yargs')
     },
     desc: 'input file path or camera capture (number)',
   })
+  .option('background', {
+    alias: 'b',
+    desc: 'background file',
+    type: 'string',
+  })
   .option('resize', {
     alias: 's',
     coerce: (arg) => {
@@ -70,7 +75,9 @@ const cv = require('opencv4nodejs');
   });
   console.debug('BodyPix Loaded.');
 
-  const background = cv.imread('background.jpg').resize(height, width);
+  const background = (!!argv['background']) ?
+    cv.imread('background.jpg').resize(height, width) :
+    new cv.Mat(height, width, cv.CV_8UC3, [0, 255, 0]);
 
   const out = new cv.VideoWriter(
     argv['output'],
