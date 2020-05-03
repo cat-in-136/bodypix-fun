@@ -12,6 +12,18 @@ const argv = require('yargs')
     },
     desc: 'input file path or camera capture (number)',
   })
+  .option('resize', {
+    alias: 's',
+    coerce: (arg) => {
+      if (/^([0-9]+)x([0-9]+)$/.test(arg)) {
+        return {width: parseInt(RegExp.$1), height: parseInt(RegExp.$2)};
+      } else {
+        throw new Error("specify image size e.g. -s 640x480");
+      }
+    },
+    desc: 'resize output image size e.g. 640x480',
+    type: 'string',
+  })
   .option('output', {
     alias: 'o',
     demandOption: true,
@@ -44,8 +56,11 @@ const cv = require('opencv4nodejs');
 
 (async () => {
   const vCap = new cv.VideoCapture(argv['input']);
-  const width = vCap.get(cv.CAP_PROP_FRAME_WIDTH);
-  const height = vCap.get(cv.CAP_PROP_FRAME_HEIGHT);
+  const vCapSize = new cv.Size(
+    vCap.get(cv.CAP_PROP_FRAME_WIDTH),
+    vCap.get(cv.CAP_PROP_FRAME_HEIGHT)
+  );
+  const {width, height} = (!!argv['resize']) ? argv['resize'] : vCapSize;
 
   const net = await bodyPix.load({
     architecture: 'MobileNetV1',
@@ -66,8 +81,9 @@ const cv = require('opencv4nodejs');
 
   try {
     while (true) {
-      const frame = vCap.read();
+      let frame = vCap.read();
       if (frame.empty) { break; }
+      frame = frame.resize(height, width);
 
       console.time('bodyPix');
       const image = tf.tensor3d(await frame.getData(), [height, width, 3]);
