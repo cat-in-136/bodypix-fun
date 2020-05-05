@@ -31,7 +31,6 @@ const argv = require('yargs')
   })
   .option('output', {
     alias: 'o',
-    demandOption: true,
     desc: 'output file path',
     type: 'string',
   })
@@ -79,12 +78,12 @@ const cv = require('opencv4nodejs');
     cv.imread(argv['background']).resize(height, width) :
     new cv.Mat(height, width, cv.CV_8UC3, [0, 255, 0]);
 
-  const out = new cv.VideoWriter(
+  const out = (!!argv['output'])? new cv.VideoWriter(
     argv['output'],
     cv.VideoWriter.fourcc('h264'), //vCap.get(cv.CAP_PROP_FOURCC),
     vCap.get(cv.CAP_PROP_FPS),
     new cv.Size(width, height),
-    true);
+    true) : null;
 
   try {
     while (true) {
@@ -106,7 +105,9 @@ const cv = require('opencv4nodejs');
       const outFrame = new cv.Mat(height, width, frame.type);
       background.copyTo(outFrame);
       frame.copyTo(outFrame, mask);
-      out.write(outFrame);
+      if (!!out) {
+        out.write(outFrame);
+      }
 
       if (argv['preview']) {
         cv.imshow('out', outFrame);
@@ -117,7 +118,9 @@ const cv = require('opencv4nodejs');
     }
   } finally {
     vCap.release();
-    out.release();
+    if (!!out) {
+      out.release();
+    }
 
     if (argv['preview']) {
       cv.destroyAllWindows();
