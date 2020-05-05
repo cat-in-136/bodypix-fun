@@ -76,7 +76,7 @@ const cv = require('opencv4nodejs');
   console.debug('BodyPix Loaded.');
 
   const background = (!!argv['background']) ?
-    cv.imread('background.jpg').resize(height, width) :
+    cv.imread(argv['background']).resize(height, width) :
     new cv.Mat(height, width, cv.CV_8UC3, [0, 255, 0]);
 
   const out = new cv.VideoWriter(
